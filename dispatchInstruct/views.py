@@ -3,6 +3,7 @@ from rest_framework import permissions, status
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import transaction
 from .frames import dil_upload_columns
 from .serializers import *
 
@@ -89,6 +90,39 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
                 return Response({'message': 'File does not contain all the required columns',
                                  'status': status.HTTP_400_BAD_REQUEST})
         except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
+    @action(detail=False, methods=['post'], url_path='dil_upload_transaction', url_name='dil_upload_transaction')
+    def dil_upload_transaction(self, request, *args, **kwargs):
+        try:
+            file = request.FILES['file']
+            df = pd.read_excel(file, sheet_name='Sheet1')
+            pre_columns = dil_upload_columns
+            column_names = df.columns.tolist()
+
+            # Check if all the required columns are present
+            if all(element in pre_columns for element in column_names):
+                objects_to_create = []
+                for index, row in df.iterrows():
+                    obj = SAPDispatchInstruction(
+                        reference_doc=row['Reference Document'],
+                        delivery_create_date=row['Delivery Create Date'],
+                        # Map other columns similarly
+                        created_by=request.user  # Assuming you want to associate the current user
+                    )
+                    objects_to_create.append(obj)
+
+                # Bulk create objects
+                with transaction.atomic():
+                    SAPDispatchInstruction.objects.bulk_create(objects_to_create)
+
+                return Response({'message': 'File uploaded successfully', 'status': status.HTTP_201_CREATED})
+            else:
+                return Response({'message': 'File does not contain all the required columns',
+                                 'status': status.HTTP_400_BAD_REQUEST})
+        except Exception as e:
+            # If any exception occurs during bulk creation, revert changes
+            transaction.rollback()
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 

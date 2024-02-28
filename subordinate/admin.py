@@ -1,6 +1,8 @@
 from django.contrib import admin
 from .models import *
 # Register your models here.
+
+
 admin.site.register(InsuranceScope)
 admin.site.register(FreightBasis)
 admin.site.register(DeliveryTerms)
