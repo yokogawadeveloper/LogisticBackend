@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-+ilx3iae7f70$)vo@1hxio7d#m+eql(ya#uw%z_*5gn61pva)8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'master.apps.MasterConfig',
     'subordinate.apps.SubordinateConfig',
     'dispatchInstruct.apps.DispatchinstructConfig',
+    'workflow.apps.WorkflowConfig',
 ]
 
 MIDDLEWARE = [

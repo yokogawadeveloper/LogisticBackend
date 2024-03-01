@@ -144,3 +144,4 @@ class SpecialGSTRate(models.Model):
 
     class Meta:
         db_table = "SpecialGSTRate"
+
