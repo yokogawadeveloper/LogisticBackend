@@ -1,9 +1,10 @@
+import time
 import pandas as pd
+from django.db import transaction
 from rest_framework import permissions, status
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import transaction
 from .frames import dil_upload_columns
 from .serializers import *
 
@@ -95,6 +96,7 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='dil_upload_transaction', url_name='dil_upload_transaction')
     def dil_upload_transaction(self, request, *args, **kwargs):
         try:
+            start_time = time.time()  # Start timing
             file = request.FILES['file']
             df = pd.read_excel(file, sheet_name='Sheet1')
             pre_columns = dil_upload_columns
@@ -106,22 +108,75 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
                 for index, row in df.iterrows():
                     obj = SAPDispatchInstruction(
                         reference_doc=row['Reference Document'],
+                        sold_to_party_no=row['Sold-to Party'],
+                        sold_to_party_name=row['Sold-to Party Name'],
+                        delivery=row['Delivery'],
                         delivery_create_date=row['Delivery Create Date'],
-                        # Map other columns similarly
-                        created_by=request.user  # Assuming you want to associate the current user
+                        delivery_item=row['Delivery Item'],
+                        tax_invoice_no=row['Tax Invoice Number (ODN)'],
+                        reference_doc_item=row['Reference Document Item'],
+                        ms_code=row['MS Code'],
+                        sales_quantity=row['Quantity (Sales)'],
+                        linkage_no=row['Linkage Number'],
+                        sales_office=row['Sales Office'],
+                        term_of_payment=row['Terms of Payment'],
+                        tax_invoice_date=row['Tax Invoice Date'],
+
+                        material_discription=row['Material Description'],
+                        plant=row['Plant'],
+                        plant_name=row['Plant Name'],
+                        unit_sales=row['Unit (Sales)'],
+                        billing_number=row['Billing Number'],
+                        billing_create_date=row['Billing Create Date'],
+                        currency_type=row['Currency (Sales)'],
+                        ship_to_party_no=row['Ship-to party'],
+                        ship_to_party_name=row['Ship-to Party Name'],
+                        ship_to_country=row['Ship-to Country'],
+                        ship_to_postal_code=row['Ship-to Postal Code'],
+                        ship_to_city=row['Ship-to City'],
+                        ship_to_street=row['Ship-to Street'],
+                        ship_to_street_for=row['Ship-to Street4'],
+                        insurance_scope=row['Insurance Scope'],
+                        sold_to_country=row['Sold-to Country'],
+                        sold_to_postal_code=row['Sold-to Postal Code'],
+                        sold_to_city=row['Sold-to City'],
+                        sold_to_street=row['Sold-to Street'],
+                        sold_to_street_for=row['Sold-to Street4'],
+                        material_no=row['Material Number'],
+                        hs_code=row['HS Code'],
+                        hs_code_export=row['HS Code Export'],
+                        delivery_quantity=row['Delivery quantity'],
+                        unit_delivery=row['Unit (Delivery)'],
+                        storage_location=row['Storage Location'],
+                        dil_output_date=row['DIL Output Date'],
+                        sales_doc_type=row['Sales Document Type'],
+                        distribution_channel=row['Distribution Channel'],
+                        invoice_item=row['Invoice Item'],
+                        tax_invoice_assessable_value=row['Tax Invoice Assessable Value'],
+                        tax_invoice_total_tax_value=row['Tax Invoice Total Tax Value'],
+                        tax_invoice_total_value=row['Tax Invoice Total Value'],
+                        sales_item_price=row['Item Price (Sales)'],
+                        packing_status=row['Packing status'],
+                        do_item_packed_quantity=row['DO Item Packed Quantity'],
+                        packed_unit_quantity=row['Packed Quantity unit'],
+                        created_by=request.user
                     )
                     objects_to_create.append(obj)
-
                 # Bulk create objects
                 with transaction.atomic():
                     SAPDispatchInstruction.objects.bulk_create(objects_to_create)
-
-                return Response({'message': 'File uploaded successfully', 'status': status.HTTP_201_CREATED})
+                    # Calculate upload time
+                    end_time = time.time()
+                    upload_time = end_time - start_time
+                return Response(
+                    {'message': 'File uploaded successfully',
+                     'timeComplexity': upload_time,
+                     'status': status.HTTP_201_CREATED
+                     })
             else:
                 return Response({'message': 'File does not contain all the required columns',
                                  'status': status.HTTP_400_BAD_REQUEST})
         except Exception as e:
-            # If any exception occurs during bulk creation, revert changes
             transaction.rollback()
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
