@@ -59,41 +59,7 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['post'], url_path='dil_upload', url_name='dil_upload')
-    def dil_upload(self, request, *args, **kwargs):
-        try:
-            file = request.FILES['file']
-            df = pd.read_excel(file, sheet_name='Sheet1')
-            pre_columns = dil_upload_columns
-            column_names = df.columns.tolist()
-
-            # check if all the columns are present in the file
-            if all(element in pre_columns for element in column_names):
-                for column_name in df.columns:
-                    # Try to convert each column to the desired type
-                    try:
-                        if column_name in ['Reference Document', 'Delivery Create Date', 'Tax Invoice Date',
-                                           'Billing Create Date', 'DIL Output Date']:
-                            df[column_name] = df[column_name].astype(str)
-                        elif column_name in ['Tax Invoice Assessable Value', 'Tax Invoice Total Tax Value',
-                                             'Tax Invoice Total Value', 'Item Price (Sales)']:
-                            df[column_name] = df[column_name].astype(float)
-                    except ValueError:
-                        # If there's a conversion error, return a response indicating the column causing the issue
-                        return Response({'message': f'Error converting column "{column_name}" to the desired type',
-                                         'status': status.HTTP_400_BAD_REQUEST})
-
-                    # If all conversions succeed, you can proceed with creating objects or any other operations
-                    # SAPDispatchInstruction.objects.create(...)
-
-                return Response({'message': 'File uploaded successfully', 'status': status.HTTP_201_CREATED})
-            else:
-                return Response({'message': 'File does not contain all the required columns',
-                                 'status': status.HTTP_400_BAD_REQUEST})
-        except Exception as e:
-            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
-
-    @action(detail=False, methods=['post'], url_path='dil_upload_transaction', url_name='dil_upload_transaction')
+    @action(detail=False, methods=['post'], url_path='dil_upload')
     def dil_upload_transaction(self, request, *args, **kwargs):
         try:
             start_time = time.time()  # Start timing
@@ -174,10 +140,22 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
                      'status': status.HTTP_201_CREATED
                      })
             else:
-                return Response({'message': 'File does not contain all the required columns',
-                                 'status': status.HTTP_400_BAD_REQUEST})
+                return Response(
+                    {'message': 'File does not contain required columns', 'status': status.HTTP_400_BAD_REQUEST})
         except Exception as e:
             transaction.rollback()
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
+    @action(detail=False, methods=['post'], url_path='dil_based_on_delivery')
+    def dil_based_on_delivery(self, request, *args, **kwargs):
+        try:
+            delivery_no = request.data['delivery']
+            dil = SAPDispatchInstruction.objects.filter(delivery=delivery_no).all()
+            if not dil:
+                return Response({'message': 'DIL Not found for this delivery', 'status': status.HTTP_204_NO_CONTENT})
+            serializer = SAPDispatchInstructionSerializer(dil, many=True)
+            return Response(serializer.data)
+        except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 
@@ -204,6 +182,47 @@ class DispatchInstructionBillDetailsViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'], url_path='create_bill_details')
+    def create_bill_details(self, request, *args, **kwargs):
+        try:
+            payload = request.data
+            with transaction.atomic():
+                for item in payload:
+                    dil = DispatchInstruction.objects.filter(dil_id=item['dil_id']).first()
+                    if not dil:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
+                    if not dil.is_active:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'DIL is not active', 'status': status.HTTP_204_NO_CONTENT})
+                    DispatchInstructionBillDetails.objects.create(
+                        dil_id=dil,
+                        material_description=item['material_discription'],
+                        material_no=item['material_no'],
+                        ms_code=item['ms_code'],
+                        s_loc=item['storage_location'],
+                        sap_line_item_no=item['delivery_item'],
+                        linkage_no=item['linkage_no'],
+                        # group=item['group'],
+                        quantity=item['delivery_quantity'],
+                        country_of_origin=item['ship_to_country'],
+                        # item_status=item['item_status'],
+                        # item_status_no=item['item_status_no'],
+                        packed_quantity=item['do_item_packed_quantity'],
+                        item_price=item['sales_item_price'],
+                        # igst=item['igst'],
+                        # cgst=item['cgst'],
+                        # sgst=item['sgst'],
+                        tax_amount=item['tax_invoice_assessable_value'],
+                        total_amount=item['tax_invoice_total_tax_value'],
+                        total_amount_with_tax=item['tax_invoice_total_value'],
+                        created_by=request.user
+                    )
+                return Response({'message': 'Bill details created successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            transaction.set_rollback(True)
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 
 class MasterItemListViewSet(viewsets.ModelViewSet):
@@ -244,6 +263,45 @@ class MasterItemListViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'], url_path='create_master_item_list')
+    def create_master_item_list(self, request, *args, **kwargs):
+        try:
+            payload = request.data
+            with transaction.atomic():
+                for item in payload:
+                    dil = DispatchInstruction.objects.filter(dil_id=item['dil_id']).first()
+                    if not dil:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
+                    if not dil.is_active:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'DIL is not active', 'status': status.HTTP_204_NO_CONTENT})
+                    MasterItemList.objects.create(
+                        dil_id=dil,
+                        material_description=item['material_discription'],
+                        material_no=item['material_no'],
+                        ms_code=item['ms_code'],
+                        s_loc=item['storage_location'],
+                        plant=item['plant'],
+                        linkage_no=item['linkage_no'],
+                        quantity=item['delivery_quantity'],
+                        country_of_origin=item['ship_to_country'],
+                        # serial_no=item['serial_no'],
+                        # match_no=item['match_no'],
+                        # tag_no=item['tag_no'],
+                        # range=item['range'],
+                        # customer_po_sl_no=item['customer_po_sl_no'],
+                        # customer_po_item_code=item['customer_po_item_code'],
+                        # item_status=item['item_status'],
+                        # item_status_no=item['item_status_no'],
+                        packed_quantity=item['do_item_packed_quantity'],
+                        created_by=request.user
+                    )
+                return Response({'message': 'Master item list created successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            transaction.set_rollback(True)
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 
 class InlineItemListViewSet(viewsets.ModelViewSet):

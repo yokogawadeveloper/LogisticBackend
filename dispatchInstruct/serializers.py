@@ -41,7 +41,7 @@ class DispatchInstructionSerializer(serializers.ModelSerializer):
 
 class SAPDispatchInstructionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DispatchInstruction
+        model = SAPDispatchInstruction
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
 
