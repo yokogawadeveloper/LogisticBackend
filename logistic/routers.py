@@ -2,6 +2,7 @@ from rest_framework import routers
 from master.views import *
 from subordinate.views import *
 from dispatchInstruct.views import *
+from workflow.views import *
 
 # Add routers here.
 
@@ -24,3 +25,10 @@ router.register('sap_dispatch_instruction', SAPDispatchInstructionViewSet, basen
 router.register('dispatch_instruction_bill_details', DispatchInstructionBillDetailsViewSet, basename='dispatch_instruction_bill_details')
 router.register('master_item_list', MasterItemListViewSet, basename='master_item_list')
 router.register('inline_item_list', InlineItemListViewSet, basename='inline_item_list')
+
+# ----------------------------- Workflow ------------------------------------------- #
+router.register('workflow_type', WorkFLowTypeViewSet, basename='workflow_type')
+router.register('workflow_control', WorkFlowControlViewSet, basename='workflow_control')
+router.register('workflow_employees', WorkFlowEmployeesViewSet, basename='workflow_employees')
+router.register('workflow_access', WorkflowAccessViewSet, basename='workflow_access')
+
