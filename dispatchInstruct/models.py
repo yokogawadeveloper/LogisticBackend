@@ -9,7 +9,7 @@ class DispatchInstruction(models.Model):
     dil_date = models.DateField(auto_now=False, auto_now_add=True)
     so_no = models.CharField(max_length=20, null=True, blank=True)
     po_no = models.CharField(max_length=20, null=True, blank=True)
-    po_date = models.DateField(blank=True, null=True)
+    po_date = models.CharField(max_length=20, null=True, blank=True)
     ship_to = models.CharField(max_length=100, null=True, blank=True)
     bill_to = models.CharField(max_length=100, null=True, blank=True)
     sold_to = models.CharField(max_length=100, null=True, blank=True)
