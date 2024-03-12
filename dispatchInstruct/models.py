@@ -60,7 +60,7 @@ class DispatchInstruction(models.Model):
     dispatched_date = models.DateField(auto_now=False, auto_now_add=False)
     revision_flag = models.CharField(max_length=100, null=True, blank=True)
     revision_count = models.IntegerField(null=True, blank=True)
-    remarks = models.TextField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True, default="")
     # default fields
     created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
