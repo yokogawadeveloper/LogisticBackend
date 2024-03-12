@@ -52,6 +52,19 @@ class WorkFlowEmployeesSerializer(serializers.ModelSerializer):
         return super(WorkFlowEmployeesSerializer, self).update(instance=instance, validated_data=validated_data)
 
 
+class WorkFlowDaApproversSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkFlowDaApprovers
+        fields = '__all__'
+
+    def create(self, validated_data):
+        return WorkFlowDaApprovers.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.wf_id = validated_data.get('wf_id', instance.wf_id)
+        return super(WorkFlowDaApproversSerializer, self).update(instance=instance, validated_data=validated_data)
+
+
 class WorkflowAccessSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkflowAccess

@@ -103,3 +103,55 @@ class InlineItemListSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
         depth = 1
+
+
+class DAAuthThreadsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DAAuthThreads
+        fields = '__all__'
+        read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return DAAuthThreads.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.da_id = validated_data.get('da_id', instance.da_id)
+        instance.wf_id = validated_data.get('wf_id', instance.wf_id)
+        return super(DAAuthThreadsSerializer, self).update(instance=instance, validated_data=validated_data)
+
+
+class FileTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileType
+        fields = '__all__'
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return FileType.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.file_type = validated_data.get('file_type', instance.file_type)
+        instance.updated_by = self.context['request'].user
+        return super(FileTypeSerializer, self).update(instance=instance, validated_data=validated_data)
+
+
+class MultiFileAttachmentSerializer(serializers.ModelSerializer):
+    created_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    updated_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = MultiFileAttachment
+        fields = '__all__'
+        depth = 1
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        validated_data['is_active'] = True
+        return MultiFileAttachment.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.file_name = validated_data.get('file_name', instance.file_name)
+        instance.file_type = validated_data.get('file_type', instance.file_type)
+        instance.updated_by = self.context['request'].user
+        return super(MultiFileAttachmentSerializer, self).update(instance=instance, validated_data=validated_data)

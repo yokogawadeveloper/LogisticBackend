@@ -6,10 +6,10 @@ from django.db import models
 class DispatchInstruction(models.Model):
     dil_id = models.AutoField(primary_key=True)
     dil_no = models.CharField(max_length=20, null=True, blank=True)
-    dil_date = models.DateField(auto_now=True, auto_now_add=False)
+    dil_date = models.DateField(auto_now=False, auto_now_add=True)
     so_no = models.CharField(max_length=20, null=True, blank=True)
     po_no = models.CharField(max_length=20, null=True, blank=True)
-    po_date = models.DateField(auto_now=True, auto_now_add=False)
+    po_date = models.DateField(auto_now=False, auto_now_add=False)
     ship_to = models.CharField(max_length=100, null=True, blank=True)
     bill_to = models.CharField(max_length=100, null=True, blank=True)
     sold_to = models.CharField(max_length=100, null=True, blank=True)
@@ -38,26 +38,29 @@ class DispatchInstruction(models.Model):
     sales_office_name = models.CharField(max_length=100, null=True, blank=True)
     ld_applicable = models.CharField(max_length=100, null=True, blank=True)
     cdd = models.CharField(max_length=100, null=True, blank=True)
-    submitted_date = models.DateField(auto_now=True, auto_now_add=False)
+    submitted_date = models.DateField(auto_now=False, auto_now_add=False)
     finance_by = models.CharField(max_length=100, null=True, blank=True)
-    finance_date = models.DateField(auto_now=True, auto_now_add=False)
+    finance_date = models.DateField(auto_now=False, auto_now_add=False)
     pqa_by = models.CharField(max_length=100, null=True, blank=True)
-    pqa_date = models.DateField(auto_now=True, auto_now_add=False)
-    current_level = models.CharField(max_length=100, null=True, blank=True)
+    pqa_date = models.DateField(auto_now=False, auto_now_add=False)
+    current_level = models.CharField(max_length=100, null=True, blank=True, default=1)
+    dil_level = models.CharField(max_length=100, null=True, blank=True, default=1)
     approval_level = models.CharField(max_length=100, null=True, blank=True)
-    approved_date = models.DateField(auto_now=True, auto_now_add=False)
+    approved_date = models.DateField(auto_now=False, auto_now_add=False)
     dil_status_no = models.CharField(max_length=100, null=True, blank=True)
     dil_status = models.CharField(max_length=100, null=True, blank=True)
+    dil_sub_status_no = models.IntegerField(null=True, blank=True, default=0)
     acknowledge_by = models.CharField(max_length=100, null=True, blank=True)
-    acknowledge_date = models.DateField(auto_now=True, auto_now_add=False)
+    acknowledge_date = models.DateField(auto_now=False, auto_now_add=False)
     packed_flag = models.CharField(max_length=100, null=True, blank=True)
-    packed_date = models.DateField(auto_now=True, auto_now_add=False)
+    packed_date = models.DateField(auto_now=False, auto_now_add=False)
     loaded_flag = models.CharField(max_length=100, null=True, blank=True)
-    loaded_date = models.DateField(auto_now=True, auto_now_add=False)
+    loaded_date = models.DateField(auto_now=False, auto_now_add=False)
     dispatched_flag = models.CharField(max_length=100, null=True, blank=True)
-    dispatched_date = models.DateField(auto_now=True, auto_now_add=False)
+    dispatched_date = models.DateField(auto_now=False, auto_now_add=False)
     revision_flag = models.CharField(max_length=100, null=True, blank=True)
     revision_count = models.IntegerField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
     # default fields
     created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
@@ -239,3 +242,80 @@ class InlineItemList(models.Model):
 
     class Meta:
         db_table = "InlineItemList"
+
+
+class DAUserRequestAllocation(models.Model):
+    id = models.AutoField(primary_key=True, unique=True)
+    emp_id = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+    dil_id = models.ForeignKey(DispatchInstruction, null=True, on_delete=models.CASCADE)
+    status = models.CharField(max_length=200, null=True, blank=True)
+    approve_status = models.CharField(max_length=200, default="Approver")
+    approver_flag = models.BooleanField(default=False)
+    approved_date = models.DateTimeField(auto_now_add=True, null=True)
+
+    created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    is_active = models.BooleanField(null=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = 'DAUserRequestAllocation'
+
+
+class DAAuthThreads(models.Model):
+    id = models.AutoField(primary_key=True, unique=True)
+    dil_id = models.ForeignKey(DispatchInstruction, null=True, on_delete=models.CASCADE)
+    emp_id = models.IntegerField(null=True)
+    remarks = models.CharField(max_length=500, null=True)
+    status = models.CharField(max_length=50, null=True)
+    approver = models.CharField(max_length=50, null=True, blank=True)
+    assign_list = models.CharField(max_length=250, null=True, blank=True)
+
+    created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = 'DaAuthThreads'
+
+
+class FileType(models.Model):
+    file_type_id = models.AutoField(primary_key=True)
+    file_type = models.CharField(max_length=100, null=True, blank=True)
+    file_module_name = models.CharField(max_length=100, null=True, blank=True)
+    # default fields
+    created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE, blank=True)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = "FileType"
+
+
+class MultiFileAttachment(models.Model):
+    file = models.FileField(upload_to='multi_file/%Y_%m_%d/%H_%M_%S', blank=True)
+    dil_id = models.ForeignKey(DispatchInstruction, null=True, on_delete=models.CASCADE)
+    file_type = models.ForeignKey(FileType, null=True, on_delete=models.CASCADE)
+    module_name = models.CharField(max_length=100, null=True, blank=True)
+    module_id = models.IntegerField(blank=True, null=True)
+    # default fields
+    created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = "MultiFileAttachment"

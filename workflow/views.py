@@ -1,4 +1,5 @@
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -105,6 +106,45 @@ class WorkFlowEmployeesViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class WorkFlowDaApproversViewSet(viewsets.ModelViewSet):
+    queryset = WorkFlowDaApprovers.objects.all()
+    serializer_class = WorkFlowDaApproversSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        serializer = WorkFlowDaApproversSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='create_wf_da_approval')
+    def create_wf_da_approval(self, request, *args, **kwargs):
+        try:
+            dil_id = request.data['dil_id']
+            wf_id = request.data['wf_id']
+            approval_list = request.data['approval']
+            for item in approval_list:
+                data = {
+                    'dil_id': dil_id,
+                    'wf_id': wf_id,
+                    'approver': item['approver'],
+                    'level': item['level'],
+                    'parallel': item['parallel'],
+                    'emp_id': item['emp_id'],
+                    'status': item['status'],
+                }
+                serializer = WorkFlowDaApproversSerializer(data=data, context={'request': request})
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Workflow DA Approval created successfully'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class WorkflowAccessViewSet(viewsets.ModelViewSet):
     queryset = WorkflowAccess.objects.all()
     serializer_class = WorkflowAccessSerializer
@@ -141,5 +181,3 @@ class WorkflowAccessViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-

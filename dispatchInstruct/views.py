@@ -1,5 +1,6 @@
 import time
 import pandas as pd
+from datetime import datetime
 from django.db import transaction
 from rest_framework import permissions, status
 from rest_framework import viewsets
@@ -7,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .frames import dil_upload_columns
 from .serializers import *
+from workflow.models import *
 
 
 # Create your views here.
@@ -342,3 +344,163 @@ class InlineItemListViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FileTypeViewSet(viewsets.ModelViewSet):
+    queryset = FileType.objects.all()
+    serializer_class = FileTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MultiFileAttachmentViewSet(viewsets.ModelViewSet):
+    queryset = MultiFileAttachment.objects.all()
+    serializer_class = MultiFileAttachmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, context={'request': request}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='create_multi_file_attachment')
+    def create_multi_file_attachment(self, request, *args, **kwargs):
+        try:
+            payload = request.FILES.getlist('file')
+            dil_id = request.data['dil_id']
+            file_type = request.data['file_type']
+            module_name = request.data['module_name']
+            module_id = request.data['module_id']
+            with transaction.atomic():
+                for file in payload:
+                    dil = DispatchInstruction.objects.filter(dil_id=dil_id).first()
+                    fileType = FileType.objects.filter(file_type_id=file_type).first()
+                    if not dil:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
+                    if not fileType:
+                        transaction.set_rollback(True)
+                        return Response({'message': 'File type not found', 'status': status.HTTP_204_NO_CONTENT})
+                    # Create multi file attachment
+                    MultiFileAttachment.objects.create(
+                        dil_id=dil,
+                        file=file,
+                        file_type=fileType,
+                        module_name=module_name,
+                        module_id=module_id,
+                    )
+                return Response({'message': 'Multiple File uploaded successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            transaction.set_rollback(True)
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
+
+class DILAuthThreadsViewSet(viewsets.ModelViewSet):
+    queryset = DAAuthThreads.objects.all()
+    serializer_class = DAAuthThreadsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        queryset = DAAuthThreads.objects.all().filter(is_active=True)
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        global currentlevel
+        try:
+            data = request.data.copy()
+            user_id = request.user.id
+            stature = data['status']
+            dil_id = data['da_id']
+            dil = DispatchInstruction.objects.filter(dil_id=dil_id)
+            if dil is not None:
+                current_level = dil.values('current_level')[0]['current_level']
+                dil_level = dil.values('dil_level')[0]['dil_level']
+                wf_approver = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id, level=current_level)
+                checking = wf_approver.values('approver')[0]['approver']
+                wf_da_count = wf_approver.count()
+                currentlevel = current_level
+
+                if stature == "modification":
+                    dispatch = DispatchInstruction.objects.filter(dil_id=data['da_id'])
+                    dispatch.update(current_level=1, status="modification")
+                    DAUserRequestAllocation.objects.filter(dil_id_id=data['da_id'], approve_status='Approver',
+                                                           approved_date=datetime.now()).delete()
+                    WorkFlowDaApprovers.objects.filter(dil_id_id=data['da_id']).update(status="pending")
+
+                elif stature == "reject":
+                    DispatchInstruction.objects.filter(dil_id=data['da_id']).update(current_level=1, status="rejected")
+                    allocation = DAUserRequestAllocation.objects.filter(dil_id_id=data['da_id'], emp_id=user_id)
+                    allocation.update(status="rejected", approved_date=datetime.now())
+
+                else:
+                    wf_da_status = wf_approver.filter(emp_id=user_id).values('approver')[0]['approver']
+                    data['approver'] = wf_da_status
+
+                    # finance_dispatch_flag = data['da_dispatch_approve']
+                    # if finance_dispatch_flag:
+                    #     dil.update(finance_flag=True)
+                    #     data['status'] = "Finance Approved For Dispatch"
+                    # elif data['approver'] == 'Finance' and finance_dispatch_flag == False:
+                    #     data['status'] = "Finance Approved only for Packing"
+
+                    # update the allocation table
+                    allocation = DAUserRequestAllocation.objects.filter(dil_id_id=dil_id, emp_id=user_id)
+                    allocation.update(status="approved", approved_date=datetime.now())
+                    DAUserRequestAllocation.objects.filter(dil_id_id=dil_id).update(approver_flag=True)
+                    # if all the approvers are approved then update the status
+                    if dil_level >= current_level:
+                        wf_approver.filter(emp_id=user_id).update(status=status)
+                        if wf_da_count == wf_approver.exclude(parallel=True, status__contains='approved').count():
+                            currentlevel = current_level
+                            current_level = current_level + 1
+                            dil.update(current_level=current_level, status=wf_da_status + ' ' + "approved",
+                                       da_status_number=2)
+                            # for each level create the allocation
+                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=data['da_id'],
+                                                                                level=current_level).values()
+                            for i in flow_approvers:
+                                DAUserRequestAllocation.objects.create(da_id_id=request.data['da_id'],
+                                                                       emp_id_id=i['emp_id'], status="pending")
+
+                        elif wf_da_count == wf_approver.filter(parallel=True, status__contains='approved').count():
+                            currentlevel = current_level
+                            current_level = current_level + 1
+                            dil.update(current_level=current_level, status=wf_da_status + ' ' + "approved",
+                                       da_status_number=2)
+                            # for each level create the allocation
+                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=data['da_id'],
+                                                                                level=current_level).values()
+                            for i in flow_approvers:
+                                DAUserRequestAllocation.objects.create(dil_id_id=data['da_id'], emp_id_id=i['emp_id'],
+                                                                       status="pending")
+                        # if the current level is greater than the dil level then update the dil level
+                        if dil_level < current_level:
+                            dil.update(approve_flag=True)
+            return Response({'message': 'DIL Auth Threads created successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

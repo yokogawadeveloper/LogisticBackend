@@ -81,7 +81,7 @@ class ModuleMasterViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post'], detail=False, url_path='get_menu_for_role_id_based')
-    def getMenuForRoleIDBased(self, request):
+    def getMenuForRoleIDBased(self, request, *args, **kwargs):
         try:
             role_id = request.data['role_id']
             arr = []

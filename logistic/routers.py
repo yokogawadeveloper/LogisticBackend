@@ -25,10 +25,17 @@ router.register('sap_dispatch_instruction', SAPDispatchInstructionViewSet, basen
 router.register('dispatch_instruction_bill_details', DispatchInstructionBillDetailsViewSet, basename='dispatch_instruction_bill_details')
 router.register('master_item_list', MasterItemListViewSet, basename='master_item_list')
 router.register('inline_item_list', InlineItemListViewSet, basename='inline_item_list')
+router.register('file_type', FileTypeViewSet, basename='file_type')
+router.register('multi_file_attachment', MultiFileAttachmentViewSet, basename='multi_file_attachment')
+router.register('dil_auth_thread', DILAuthThreadsViewSet, basename='dil_auth_thread')
 
 # ----------------------------- Workflow ------------------------------------------- #
 router.register('workflow_type', WorkFLowTypeViewSet, basename='workflow_type')
 router.register('workflow_control', WorkFlowControlViewSet, basename='workflow_control')
 router.register('workflow_employees', WorkFlowEmployeesViewSet, basename='workflow_employees')
+router.register('workflow_da_approvers', WorkFlowDaApproversViewSet, basename='workflow_da_approvers')
 router.register('workflow_access', WorkflowAccessViewSet, basename='workflow_access')
+
+
+
 

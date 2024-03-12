@@ -4,11 +4,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from master.models import *
 from .serializers import *
+from .decorators import *
 
 User = get_user_model()
 
 
-# Create your views here.
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmployeeTokenObtainPairSerializer
     permission_classes = (AllowAny,)
@@ -31,6 +31,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 return Response({'error': 'User does not exist'}, status=status.HTTP_401_UNAUTHORIZED)
 
         if serializer.is_valid():
+            # Getting menu for user role
+            menu_response = get_user_menu(user.role)
+            root_list = get_root_list(user.role)
+            # Returning combined response
             return Response({
                 'access': serializer.validated_data['access'],
                 'refresh': serializer.validated_data['refresh'],
@@ -41,6 +45,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     'department': user.department.id if user.department else None,
                     'subDepartment': user.sub_department.id if user.sub_department else None,
                     'role': user.role if user.role else 'No Role Assigned',
-                }
+                },
+                'menu': menu_response,
+                'sub_menu': root_list
             })
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
