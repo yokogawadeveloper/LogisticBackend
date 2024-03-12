@@ -8,25 +8,10 @@ class DispatchInstructionSerializer(serializers.ModelSerializer):
     so_no = serializers.CharField(max_length=20, required=True)
     po_no = serializers.CharField(max_length=20, required=True)
 
-    # insurance_scope = serializers.PrimaryKeyRelatedField(queryset=InsuranceScope.objects.all(), required=True)
-    # freight_basis = serializers.PrimaryKeyRelatedField(queryset=FreightBasis.objects.all(), required=True)
-    # delivery_terms = serializers.PrimaryKeyRelatedField(queryset=DeliveryTerms.objects.all(), required=True)
-    # mode_of_shipment = serializers.PrimaryKeyRelatedField(queryset=ModeOfShipment.objects.all(), required=True)
-    # payment_status = serializers.PrimaryKeyRelatedField(queryset=PaymentStatus.objects.all(), required=True)
-    # special_packing = serializers.PrimaryKeyRelatedField(queryset=SpecialPacking.objects.all(), required=True)
-    # export_packing_req = serializers.PrimaryKeyRelatedField(queryset=ExportPackingRequirement.objects.all(),
-    #                                                         required=True)
-    # special_gst_rate = serializers.PrimaryKeyRelatedField(queryset=SpecialGSTRate.objects.all(), required=True)
-
     class Meta:
         model = DispatchInstruction
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
-
-    # def validate(self, attrs):
-    #     insurance_scope = attrs.get('insurance_scope')
-    #     if insurance_scope is None:
-    #         raise serializers.ValidationError("Insurance Scope is required.")
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
