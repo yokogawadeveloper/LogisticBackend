@@ -1,4 +1,3 @@
-from rest_framework.response import Response
 from master.serializers import *
 from master.models import *
 

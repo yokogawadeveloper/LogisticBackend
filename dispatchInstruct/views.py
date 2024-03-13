@@ -6,9 +6,9 @@ from rest_framework import permissions, status
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .frames import dil_upload_columns
-from .serializers import *
+from .frames import column_mapping
 from workflow.models import *
+from .serializers import *
 
 
 # Create your views here.
@@ -61,17 +61,33 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(detail=False, methods=['post'], url_path='dil_based_on_delivery')
+    def dil_based_on_delivery(self, request, *args, **kwargs):
+        try:
+            delivery_no = request.data['delivery']
+            dil = SAPDispatchInstruction.objects.filter(delivery=delivery_no).all()
+            if not dil:
+                return Response({'message': 'DIL Not found for this delivery', 'status': status.HTTP_204_NO_CONTENT})
+            serializer = SAPDispatchInstructionSerializer(dil, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
     @action(detail=False, methods=['post'], url_path='dil_upload')
     def dil_upload_transaction(self, request, *args, **kwargs):
         try:
             start_time = time.time()  # Start timing
             file = request.FILES['file']
             df = pd.read_excel(file, sheet_name='Sheet1')
-            pre_columns = dil_upload_columns
-            column_names = df.columns.tolist()
 
-            # Check if all the required columns are present
-            if all(element in pre_columns for element in column_names):
+            # Filter DataFrame to keep only required columns
+            df = df.rename(columns=column_mapping)
+            required_columns = list(column_mapping.values())
+            df = df[required_columns]
+
+            # Check if all required columns are present
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if not missing_columns:
                 objects_to_create = []
                 for index, row in df.iterrows():
                     obj = SAPDispatchInstruction(
@@ -130,6 +146,7 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
                         created_by=request.user
                     )
                     objects_to_create.append(obj)
+
                 # Bulk create objects
                 with transaction.atomic():
                     SAPDispatchInstruction.objects.bulk_create(objects_to_create)
@@ -143,21 +160,10 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
                      })
             else:
                 return Response(
-                    {'message': 'File does not contain required columns', 'status': status.HTTP_400_BAD_REQUEST})
+                    {'message': f'File is missing the following required columns: {", ".join(missing_columns)}',
+                     'status': status.HTTP_400_BAD_REQUEST})
         except Exception as e:
             transaction.rollback()
-            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
-
-    @action(detail=False, methods=['post'], url_path='dil_based_on_delivery')
-    def dil_based_on_delivery(self, request, *args, **kwargs):
-        try:
-            delivery_no = request.data['delivery']
-            dil = SAPDispatchInstruction.objects.filter(delivery=delivery_no).all()
-            if not dil:
-                return Response({'message': 'DIL Not found for this delivery', 'status': status.HTTP_204_NO_CONTENT})
-            serializer = SAPDispatchInstructionSerializer(dil, many=True)
-            return Response(serializer.data)
-        except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 
