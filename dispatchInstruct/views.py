@@ -242,6 +242,7 @@ class DispatchBillDetailsViewSet(viewsets.ModelViewSet):
             if not dil:
                 return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
             for item_data in item_list:
+                material_description = item_data.get("material_discription")
                 material_no = item_data.get("material_no")
                 ms_code = item_data.get("ms_code")
                 linkage_no = item_data.get("linkage_no")
@@ -254,6 +255,7 @@ class DispatchBillDetailsViewSet(viewsets.ModelViewSet):
                 # Create DispatchBillDetails instance
                 DispatchBillDetails.objects.create(
                     dil_id=dil,
+                    material_description=material_description,
                     material_no=material_no,
                     ms_code=ms_code,
                     linkage_no=linkage_no,

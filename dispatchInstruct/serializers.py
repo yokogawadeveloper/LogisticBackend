@@ -5,8 +5,6 @@ from .models import *
 # Serializers define the API representation.
 class DispatchInstructionSerializer(serializers.ModelSerializer):
     dil_no = serializers.CharField(max_length=20, required=True)
-    so_no = serializers.CharField(max_length=20, required=True)
-    po_no = serializers.CharField(max_length=20, required=True)
 
     class Meta:
         model = DispatchInstruction

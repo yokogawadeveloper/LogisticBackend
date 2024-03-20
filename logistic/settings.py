@@ -86,7 +86,7 @@ WSGI_APPLICATION = 'logistic.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': '14Logistics',
+        'NAME': 'logistic2.0',
         'USER': 'postgres',
         'PASSWORD': 'Yil@1234567',
         'HOST': 'localhost',
@@ -127,7 +127,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / "static", ]
+# STATICFILES_DIRS = [BASE_DIR / "static", ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = '/media/'
