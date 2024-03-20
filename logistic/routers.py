@@ -22,7 +22,7 @@ router.register('special_gst_rate', SpecialGSTRateViewSet, basename='special_gst
 # ----------------------------- DispatchInstruction ------------------------------------------- #
 router.register('dispatch_instruction', DispatchInstructionViewSet, basename='dispatch_instruction')
 router.register('sap_dispatch_instruction', SAPDispatchInstructionViewSet, basename='sap_dispatch_instruction')
-router.register('dispatch_instruction_bill_details', DispatchInstructionBillDetailsViewSet, basename='dispatch_instruction_bill_details')
+router.register('dispatch_bill_details', DispatchBillDetailsViewSet, basename='dispatch_bill_details')
 router.register('master_item_list', MasterItemListViewSet, basename='master_item_list')
 router.register('inline_item_list', InlineItemListViewSet, basename='inline_item_list')
 router.register('file_type', FileTypeViewSet, basename='file_type')

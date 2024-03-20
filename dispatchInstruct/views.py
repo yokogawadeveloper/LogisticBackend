@@ -167,9 +167,9 @@ class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
 
-class DispatchInstructionBillDetailsViewSet(viewsets.ModelViewSet):
-    queryset = DispatchInstructionBillDetails.objects.all()
-    serializer_class = DispatchInstructionBillDetailsSerializer
+class DispatchBillDetailsViewSet(viewsets.ModelViewSet):
+    queryset = DispatchBillDetails.objects.all()
+    serializer_class = DispatchBillDetailsSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
@@ -204,7 +204,7 @@ class DispatchInstructionBillDetailsViewSet(viewsets.ModelViewSet):
                     if not dil.is_active:
                         transaction.set_rollback(True)
                         return Response({'message': 'DIL is not active', 'status': status.HTTP_204_NO_CONTENT})
-                    DispatchInstructionBillDetails.objects.create(
+                    DispatchBillDetails.objects.create(
                         dil_id=dil,
                         material_description=item['material_discription'],
                         material_no=item['material_no'],
@@ -231,6 +231,43 @@ class DispatchInstructionBillDetailsViewSet(viewsets.ModelViewSet):
         except Exception as e:
             transaction.set_rollback(True)
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
+    @action(detail=False, methods=['post'], url_path='create_bill')
+    def create_bill(self, request, *args, **kwargs):
+        try:
+            payload = request.data
+            dil_id = payload.get("dil_id")
+            item_list = payload.get("item_list", [])
+            dil = DispatchInstruction.objects.filter(dil_id=dil_id).first()
+            if not dil:
+                return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
+            for item_data in item_list:
+                material_no = item_data.get("material_no")
+                ms_code = item_data.get("ms_code")
+                linkage_no = item_data.get("linkage_no")
+                quantity = item_data.get("sales_quantity")
+                packed_quantity = item_data.get("packed_quantity")
+                item_price = item_data.get("sales_item_price")
+                tax_amount = item_data.get("tax_invoice_total_tax_value")
+                total_amount = item_data.get("tax_invoice_total_value")
+                total_amount_with_tax = total_amount
+                # Create DispatchBillDetails instance
+                DispatchBillDetails.objects.create(
+                    dil_id=dil,
+                    material_no=material_no,
+                    ms_code=ms_code,
+                    linkage_no=linkage_no,
+                    quantity=quantity,
+                    packed_quantity=packed_quantity,
+                    item_price=item_price,
+                    tax_amount=tax_amount,
+                    total_amount=total_amount,
+                    total_amount_with_tax=total_amount_with_tax,
+                    created_by=request.user
+                )
+            return Response({'message': 'Bill created successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
 class MasterItemListViewSet(viewsets.ModelViewSet):

@@ -151,7 +151,7 @@ class SAPDispatchInstruction(models.Model):
         db_table = "SAPDispatchInstruction"
 
 
-class DispatchInstructionBillDetails(models.Model):
+class DispatchBillDetails(models.Model):
     di_bill_id = models.AutoField(primary_key=True)
     dil_id = models.ForeignKey(DispatchInstruction, on_delete=models.CASCADE, null=True, blank=True)
     material_description = models.CharField(max_length=100, null=True, blank=True)
@@ -185,7 +185,7 @@ class DispatchInstructionBillDetails(models.Model):
     objects = models.Manager()
 
     class Meta:
-        db_table = "DispatchInstructionBillDetails"
+        db_table = "DispatchBillDetails"
 
 
 class MasterItemList(models.Model):
