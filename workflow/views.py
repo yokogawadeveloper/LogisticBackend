@@ -28,7 +28,7 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
             "wf_name": data['wf_name'],
             "slug_name": data['slug_name'],
             "total_level": data['flow_details'][-1]['level'],
-            "created_by": request.user
+            # "created_by": request.user.id
         }
         serializer = WorkFlowTypeSerializer(data=request_data, context={'request': request})
         if serializer.is_valid():
@@ -52,7 +52,7 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
                     created_by_id=request.user.id
                 )
             return Response(serializer_data)
-        return Response(False)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         data = request.data
