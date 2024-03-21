@@ -14,11 +14,10 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 
 class SubDepartmentSerializer(serializers.ModelSerializer):
-    department = DepartmentSerializer()
-
     class Meta:
         model = SubDepartment
         fields = '__all__'
+        depth = 1
 
 
 class EmployeeUserSerializer(serializers.ModelSerializer):

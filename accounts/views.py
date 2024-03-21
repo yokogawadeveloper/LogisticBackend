@@ -68,3 +68,18 @@ class EmployeeUserViewSet(viewsets.ModelViewSet):
         serializer_data = serializer.data
         return Response(serializer_data)
 
+
+class SubDepartmentViewSet(viewsets.ModelViewSet):
+    queryset = SubDepartment.objects.all()
+    serializer_class = SubDepartmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        query_set = self.queryset.filter()
+        return query_set
+
+    def list(self, request, *args, **kwargs):
+        query_set = self.get_queryset()
+        serializer = self.serializer_class(query_set, many=True, context={'request': request})
+        serializer_data = serializer.data
+        return Response(serializer_data)
