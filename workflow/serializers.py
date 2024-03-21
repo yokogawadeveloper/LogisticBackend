@@ -20,6 +20,23 @@ class WorkFlowTypeSerializer(serializers.ModelSerializer):
         return super(WorkFlowTypeSerializer, self).update(instance=instance, validated_data=validated_data)
 
 
+class WorkFlowAccessSerializer(serializers.ModelSerializer):
+    wf_name = serializers.ReadOnlyField(source='wf_id.wf_name')
+
+    class Meta:
+        model = WorkFlowAccess
+        fields = '__all__'
+        read_only_fields = ('created_by', 'updated_by')
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super(WorkFlowAccessSerializer, self).create(validated_data=validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data['updated_by'] = self.context['request'].user
+        return super(WorkFlowAccessSerializer, self).update(instance=instance, validated_data=validated_data)
+
+
 class WorkFlowControlSerializer(serializers.ModelSerializer):
     wft = WorkFlowTypeSerializer(many=True, required=False)
 
@@ -65,15 +82,3 @@ class WorkFlowDaApproversSerializer(serializers.ModelSerializer):
         return super(WorkFlowDaApproversSerializer, self).update(instance=instance, validated_data=validated_data)
 
 
-class WorkflowAccessSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WorkflowAccess
-        fields = '__all__'
-        depth = 1
-
-    def create(self, validated_data):
-        return WorkflowAccess.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        instance.wfa_id = validated_data.get('wfa_id', instance.wfa_id)
-        return super(WorkflowAccessSerializer, self).update(instance=instance, validated_data=validated_data)

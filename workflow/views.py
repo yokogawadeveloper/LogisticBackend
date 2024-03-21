@@ -34,16 +34,23 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             serializer.save()
             serializer_data = serializer.data
-
+            # Create WorkFlowControl and WorkFlowEmployees objects
             for val in data['flow_details']:
-                WorkFlowControl.objects.create(wf_id_id=serializer_data['wf_id'], approver=val['approver'],
-                                               level=val['level'], parallel=val['parallel'],
-                                               created_by_id=request.user.id)
-
+                WorkFlowControl.objects.create(
+                    wf_id_id=serializer_data['wf_id'],
+                    approver=val['approver'],
+                    level=val['level'],
+                    parallel=val['parallel'],
+                    created_by_id=request.user.id
+                )
+                # Fetch latest wfc_id
                 wfc_id = WorkFlowControl.objects.values('wfc_id').latest('wfc_id')['wfc_id']
-
-                WorkFlowEmployees.objects.create(wfc_id_id=wfc_id, emp_id=val['emp_id'], created_by_id=request.user.id)
-
+                # Create WorkFlowEmployees objects
+                WorkFlowEmployees.objects.create(
+                    wfc_id_id=wfc_id,
+                    emp_id=val['emp_id'],
+                    created_by_id=request.user.id
+                )
             return Response(serializer_data)
         return Response(False)
 
@@ -55,6 +62,84 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WorkflowAccessViewSet(viewsets.ModelViewSet):
+    queryset = WorkFlowAccess.objects.all()
+    serializer_class = WorkFlowAccessSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        response_data = serializer.data
+        # Fetch related WorkFlowType objects in bulk to avoid N+1 query issue
+        wf_ids = [item['wf_id'] for item in response_data if 'wf_id' in item]
+        work_flow_types = WorkFlowType.objects.filter(wf_id__in=wf_ids, is_active=True)
+        work_flow_type_dict = {wf.wf_id: wf for wf in work_flow_types}
+        # Update response data with related WorkFlowType objects
+        for item in response_data:
+            if 'wf_id' in item:
+                wf_id = item['wf_id']
+                item['work_flow_control'] = WorkFlowTypeSerializer(work_flow_type_dict[wf_id]).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        serializer = WorkFlowAccessSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            serializer_data = serializer.data
+            # Create WorkFlowDeptEmp objects
+            for obj in data['data']:
+                for emp in obj['emp_ids']:
+                    WorkFlowDeptEmp.objects.create(
+                        wfa_id_id=serializer_data['wfa_id'],
+                        type=obj['type'], emp_id=emp,
+                        created_by_id=request.user.id
+                    )
+            return Response(serializer_data)
+        return Response(False)
+
+    def retrieve(self, request, *args, **kwargs):
+        arr = []
+
+        queryset = self.get_queryset().filter(wfa_id=kwargs['pk']).first()
+        serializer = self.serializer_class(queryset)
+        serialize_data = serializer.data
+
+        wfde = WorkFlowDeptEmp.objects.filter(wfa_id_id=kwargs['pk']).values('type', 'wfa_id_id').distinct()
+
+        for obj in wfde:
+            emp_list = WorkFlowDeptEmp.objects.filter(wfa_id_id=obj['wfa_id_id'], type=obj['type']).values_list(
+                'emp_id', flat=True)
+            arr.append({"type": obj['type'], "emp_id": list(emp_list)})
+
+        serialize_data['dept_emp'] = arr
+
+        serializer = {'records': serialize_data}
+        if queryset is None:
+            serializer = {'records': "No data available"}
+        return Response(serializer)
+
+    def update(self, request, *args, **kwargs):
+        data = request.data
+        queries = self.get_queryset().filter(wfa_id=kwargs['pk']).first()
+        serializer = WorkFlowAccessSerializer(queries, data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            serializer_data = serializer.data
+
+            WorkFlowDeptEmp.objects.filter(wfa_id_id=data['wfa_id']).delete()
+
+            for obj in data['data']:
+                for emp in obj['emp_ids']:
+                    WorkFlowDeptEmp.objects.create(wfa_id_id=data['wfa_id'],
+                                                   type=obj['type'], emp_id=emp,
+                                                   created_by_id=request.user.id)
+
+            return Response(serializer_data)
+        return Response(False)
 
 
 class WorkFlowControlViewSet(viewsets.ModelViewSet):
@@ -170,41 +255,3 @@ class WorkFlowDaApproversViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Workflow DA Approval created successfully'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class WorkflowAccessViewSet(viewsets.ModelViewSet):
-    queryset = WorkflowAccess.objects.all()
-    serializer_class = WorkflowAccessSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        response_data = serializer.data
-        # Fetch related WorkFlowType objects in bulk to avoid N+1 query issue
-        wf_ids = [item['wf_id'] for item in response_data if 'wf_id' in item]
-        work_flow_types = WorkFlowType.objects.filter(wf_id__in=wf_ids, is_active=True)
-        work_flow_type_dict = {wf.wf_id: wf for wf in work_flow_types}
-        # Update response data with related WorkFlowType objects
-        for item in response_data:
-            if 'wf_id' in item:
-                wf_id = item['wf_id']
-                item['work_flow_control'] = WorkFlowTypeSerializer(work_flow_type_dict[wf_id]).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        serializer = WorkflowAccessSerializer(data=data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, *args, **kwargs):
-        data = request.data
-        instance = self.get_object()
-        serializer = WorkflowAccessSerializer(instance, data=data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
