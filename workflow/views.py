@@ -12,13 +12,40 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
     serializer_class = WorkFlowTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        query_set = self.queryset.filter(is_active=True)
+        return query_set
+
+    def list(self, request, *args, **kwargs):
+        query_set = self.get_queryset()
+        serializer = self.serializer_class(query_set, many=True, context={'request': request})
+        serializer_data = serializer.data
+        return Response(serializer_data)
+
     def create(self, request, *args, **kwargs):
         data = request.data
-        serializer = WorkFlowTypeSerializer(data=data, context={'request': request})
+        request_data = {
+            "wf_name": data['wf_name'],
+            "slug_name": data['slug_name'],
+            "total_level": data['flow_details'][-1]['level'],
+            "created_by": request.user
+        }
+        serializer = WorkFlowTypeSerializer(data=request_data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer_data = serializer.data
+
+            for val in data['flow_details']:
+                WorkFlowControl.objects.create(wf_id_id=serializer_data['wf_id'], approver=val['approver'],
+                                               level=val['level'], parallel=val['parallel'],
+                                               created_by_id=request.user.id)
+
+                wfc_id = WorkFlowControl.objects.values('wfc_id').latest('wfc_id')['wfc_id']
+
+                WorkFlowEmployees.objects.create(wfc_id_id=wfc_id, emp_id=val['emp_id'], created_by_id=request.user.id)
+
+            return Response(serializer_data)
+        return Response(False)
 
     def update(self, request, *args, **kwargs):
         data = request.data

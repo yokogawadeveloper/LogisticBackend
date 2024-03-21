@@ -1,4 +1,5 @@
 from rest_framework import routers
+from accounts.views import *
 from master.views import *
 from subordinate.views import *
 from dispatchInstruct.views import *
@@ -7,6 +8,8 @@ from workflow.views import *
 # Add routers here.
 
 router = routers.DefaultRouter()
+# ----------------------------- Master ------------------------------------------- #
+router.register('employee_user', EmployeeUserViewSet, basename='employee_user')
 # ----------------------------- Master ------------------------------------------- #
 router.register('role_master', RoleMasterViewSet, basename='role_master')
 router.register('module_master', ModuleMasterViewSet, basename='module_master')

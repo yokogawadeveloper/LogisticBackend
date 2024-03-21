@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework import viewsets, permissions
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -50,3 +51,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 'sub_menu': root_list
             })
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class EmployeeUserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = EmployeeUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        query_set = self.queryset.filter(is_active=True)
+        return query_set
+
+    def list(self, request, *args, **kwargs):
+        query_set = self.get_queryset()
+        serializer = self.serializer_class(query_set, many=True, context={'request': request})
+        serializer_data = serializer.data
+        return Response(serializer_data)
+

@@ -69,6 +69,7 @@ class WorkflowAccessSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkflowAccess
         fields = '__all__'
+        depth = 1
 
     def create(self, validated_data):
         return WorkflowAccess.objects.create(**validated_data)

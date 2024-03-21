@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 from dispatchInstruct.models import DispatchInstruction
+from accounts.models import SubDepartment
 
 User = get_user_model()
 
@@ -84,8 +85,8 @@ class WorkFlowDaApprovers(models.Model):
 class WorkflowAccess(models.Model):
     wfa_id = models.AutoField(primary_key=True, unique=True)
     wf_id = models.ForeignKey(WorkFlowType, null=True, related_name='work_flow_control', on_delete=models.CASCADE)
+    sub_department = models.ForeignKey(SubDepartment, null=True, related_name='sub_department', on_delete=models.CASCADE)
     auth_list = ArrayField(models.CharField(max_length=50, null=True), default=list, blank=True)
-    dept_code = models.IntegerField(null=True, blank=True)
     bill_type = models.CharField(max_length=150, null=True)
     is_active = models.BooleanField(default=True)
 
