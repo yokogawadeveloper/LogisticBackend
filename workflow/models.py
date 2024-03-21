@@ -32,7 +32,7 @@ class WorkFlowType(models.Model):
 
 class WorkFlowControl(models.Model):
     wfc_id = models.AutoField(primary_key=True, unique=True)
-    wf_id = models.ForeignKey(WorkFlowType, null=True, related_name='wft', on_delete=models.CASCADE)
+    wf_id = models.ForeignKey(WorkFlowType, null=True, related_name='wfc', on_delete=models.CASCADE)
     approver = models.CharField(max_length=150, null=True, blank=True)
     level = models.IntegerField(null=True, blank=True)
     parallel = models.BooleanField(null=True, blank=True)
@@ -50,7 +50,7 @@ class WorkFlowControl(models.Model):
 
 class WorkFlowEmployees(models.Model):
     wfe_id = models.AutoField(primary_key=True, unique=True)
-    wfc_id = models.ForeignKey(WorkFlowControl, null=True, on_delete=models.CASCADE)
+    wfc_id = models.ForeignKey(WorkFlowControl, null=True, related_name='wfe', on_delete=models.CASCADE)
     emp_type = models.CharField(max_length=150, null=True, blank=True)
     emp_id = ArrayField(models.IntegerField(null=True), default=list, blank=True)
 
@@ -71,7 +71,7 @@ class WorkFlowEmployees(models.Model):
 class WorkFlowAccess(models.Model):
     wfa_id = models.AutoField(primary_key=True, unique=True)
     wf_id = models.ForeignKey(WorkFlowType, null=True, on_delete=models.CASCADE)
-    sub_department = models.ForeignKey(SubDepartment, null=True, on_delete=models.CASCADE)
+    dept_code = models.ForeignKey(SubDepartment, null=True, on_delete=models.CASCADE)
     auth_list = ArrayField(models.CharField(max_length=50, null=True), default=list, blank=True)
     bill_type = models.CharField(max_length=150, null=True)
     is_active = models.BooleanField(default=True)

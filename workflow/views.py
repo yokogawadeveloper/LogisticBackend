@@ -28,7 +28,6 @@ class WorkFLowTypeViewSet(viewsets.ModelViewSet):
             "wf_name": data['wf_name'],
             "slug_name": data['slug_name'],
             "total_level": data['flow_details'][-1]['level'],
-            # "created_by": request.user.id
         }
         serializer = WorkFlowTypeSerializer(data=request_data, context={'request': request})
         if serializer.is_valid():
@@ -99,7 +98,7 @@ class WorkflowAccessViewSet(viewsets.ModelViewSet):
                         created_by_id=request.user.id
                     )
             return Response(serializer_data)
-        return Response(False)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):
         arr = []
@@ -140,6 +139,30 @@ class WorkflowAccessViewSet(viewsets.ModelViewSet):
 
             return Response(serializer_data)
         return Response(False)
+
+    @action(methods=['post'], detail=False, url_path='workflow_filter')
+    def workflow_filter(self, request):
+        try:
+            data = request.data
+            filter_data = WorkFlowAccess.objects.filter(dept_code_id=data['dept_code'], bill_type=data['bill_type']).values_list('wf_id_id', flat=True)
+            workflow_controls = WorkFlowControl.objects.filter(wf_id_id__in=filter_data).order_by('wfc_id')
+            serializer = WorkFlowControlSerializer(workflow_controls, many=True, context={'request': request})
+            serializer_data = serializer.data
+            for i in serializer_data:
+                wfc_id = i['wfc_id']
+                workflow_employee = WorkFlowEmployees.objects.filter(wfc_id=wfc_id).first()
+                if workflow_employee:
+                    emp_ids = workflow_employee.emp_id
+                    employees = User.objects.filter(id__in=emp_ids).values('id', 'first_name')
+                    employee_list = [{"id": employee['id'], "employee_name": employee['first_name']} for employee in
+                                     employees]
+                    i['wfe'] = [{"wfe_id": workflow_employee.wfe_id, "wfc_id": workflow_employee.wfc_id.wfc_id,
+                                 "emp_id": employee_list}]
+                else:
+                    i['wfe'] = []
+            return Response(serializer_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class WorkFlowControlViewSet(viewsets.ModelViewSet):
