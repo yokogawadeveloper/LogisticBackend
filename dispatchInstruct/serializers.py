@@ -15,6 +15,7 @@ class DispatchInstructionSerializer(serializers.ModelSerializer):
         validated_data['created_by'] = self.context['request'].user
         validated_data['updated_by'] = self.context['request'].user
         validated_data['is_active'] = True
+        validated_data['dil_stage'] = 1
         return DispatchInstruction.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
