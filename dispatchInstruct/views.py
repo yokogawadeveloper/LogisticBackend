@@ -66,13 +66,26 @@ class DispatchInstructionViewSet(viewsets.ModelViewSet):
             if not data:
                 return Response({'message': 'DA not found', 'status': status.HTTP_204_NO_CONTENT})
 
-            dil_filter = DispatchInstruction.objects.filter(dil_id=dil_id)
-            da_stage = dil_filter.values('da_stage')[0]['da_stage']
+            dil_filter = DispatchInstruction.objects.filter(dil_id=dil_id).values('dil_stage')[0]['dil_stage']
             workflow_da_list = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id, level=1).values()
             for wf in workflow_da_list:
-                WorkFlowDaApprovers.objects.create(da_id_id=dil_id, emp_id_id=wf['emp_id'], status="pending")
-
-
+                DAUserRequestAllocation.objects.create(
+                    dil_id_id=dil_id,
+                    emp_id_id=wf['emp_id'],
+                    status="pending",
+                    approver_stage=wf['approver'],
+                    approver_level=wf['level'],
+                    created_by_id=request.user.id
+                )
+            # create DAUserRequestAllocation for each approver
+            DAAuthThreads.objects.create(
+                dil_id_id=dil_id,
+                emp_id=request.user.id,
+                remarks='DA prepared',
+                status="DA Submitted",
+                created_by_id=request.user.id
+            )
+            return Response({'message': 'DA completed successfully', 'status': status.HTTP_201_CREATED})
         except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
@@ -380,7 +393,8 @@ class MasterItemListViewSet(viewsets.ModelViewSet):
                             packed_quantity=item['do_item_packed_quantity'],
                             created_by=request.user
                         )
-                        return Response({'message': 'Master item list created successfully', 'status': status.HTTP_201_CREATED})
+                        return Response(
+                            {'message': 'Master item list created successfully', 'status': status.HTTP_201_CREATED})
                     else:
                         return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
         except Exception as e:
