@@ -57,8 +57,8 @@ class DispatchInstructionViewSet(viewsets.ModelViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=['post'], detail=False, url_path='complete_da_with_job_code')
-    def complete_da_with_job_code(self, request, *args, **kwargs):
+    @action(methods=['post'], detail=False, url_path='complete_dil')
+    def complete_dil(self, request, *args, **kwargs):
         try:
             payload = request.data
             dil_id = payload.get("dil_id")
@@ -324,6 +324,18 @@ class DispatchBillDetailsViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['post'], url_path='bill_details_based_dil')
+    def bill_details_based_dil(self, request, *args, **kwargs):
+        try:
+            dil_id = request.data['dil_id']
+            bill_details = DispatchBillDetails.objects.filter(dil_id=dil_id).all()
+            if not bill_details:
+                return Response({'message': 'Bill Details not found', 'status': status.HTTP_204_NO_CONTENT})
+            serializer = DispatchBillDetailsSerializer(bill_details, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
 
 class MasterItemListViewSet(viewsets.ModelViewSet):
     queryset = MasterItemList.objects.all()
@@ -363,6 +375,18 @@ class MasterItemListViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['post'], url_path='list_based_on_dil')
+    def list_based_on_dil(self, request, *args, **kwargs):
+        try:
+            dil_id = request.data['dil_id']
+            master_item_list = MasterItemList.objects.filter(dil_id=dil_id).all()
+            if not master_item_list:
+                return Response({'message': 'Master Item List not found', 'status': status.HTTP_204_NO_CONTENT})
+            serializer = MasterItemListSerializer(master_item_list, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
     @action(detail=False, methods=['post'], url_path='create_master_item_list')
     def create_master_item_list(self, request, *args, **kwargs):
