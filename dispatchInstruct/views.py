@@ -57,6 +57,25 @@ class DispatchInstructionViewSet(viewsets.ModelViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=['post'], detail=False, url_path='complete_da_with_job_code')
+    def complete_da_with_job_code(self, request, *args, **kwargs):
+        try:
+            payload = request.data
+            dil_id = payload.get("dil_id")
+            data = DispatchInstruction.objects.values().get(dil_id=dil_id)
+            if not data:
+                return Response({'message': 'DA not found', 'status': status.HTTP_204_NO_CONTENT})
+
+            dil_filter = DispatchInstruction.objects.filter(dil_id=dil_id)
+            da_stage = dil_filter.values('da_stage')[0]['da_stage']
+            workflow_da_list = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id, level=1).values()
+            for wf in workflow_da_list:
+                WorkFlowDaApprovers.objects.create(da_id_id=dil_id, emp_id_id=wf['emp_id'], status="pending")
+
+
+        except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
 
 class SAPDispatchInstructionViewSet(viewsets.ModelViewSet):
     queryset = DispatchInstruction.objects.all()
