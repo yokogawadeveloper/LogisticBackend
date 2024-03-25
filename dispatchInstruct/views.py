@@ -85,6 +85,12 @@ class DispatchInstructionViewSet(viewsets.ModelViewSet):
                 status="DA Submitted",
                 created_by_id=request.user.id
             )
+            # update the dil_stage
+            DispatchInstruction.objects.filter(dil_id=dil_id).update(
+                submitted_date=datetime.now(),
+                dil_status_no=1,
+                dil_status='DIL Submitted'
+            )
             return Response({'message': 'DA completed successfully', 'status': status.HTTP_201_CREATED})
         except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
@@ -578,9 +584,8 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                     allocation.update(status="rejected", approved_date=datetime.now())
 
                 else:
-                    wf_da_status = wf_approver.filter(emp_id=user_id).values('approver')[0]['approver']
+                    wf_da_status = WorkFlowDaApprovers.objects.filter(emp_id=user_id).values('approver')[0]['approver']
                     data['approver'] = wf_da_status
-
                     # finance_dispatch_flag = data['da_dispatch_approve']
                     # if finance_dispatch_flag:
                     #     dil.update(finance_flag=True)
@@ -593,19 +598,24 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                     allocation.update(status="approved", approved_date=datetime.now())
                     DAUserRequestAllocation.objects.filter(dil_id_id=dil_id).update(approver_flag=True)
                     # if all the approvers are approved then update the status
-                    if dil_level >= current_level:
-                        wf_approver.filter(emp_id=user_id).update(status=status)
+                    if int(dil_level) >= int(current_level):
+                        WorkFlowDaApprovers.objects.filter(emp_id=user_id).update(status=status)
                         if wf_da_count == wf_approver.exclude(parallel=True, status__contains='approved').count():
                             currentlevel = current_level
-                            current_level = current_level + 1
-                            dil.update(current_level=current_level, status=wf_da_status + ' ' + "approved",
-                                       da_status_number=2)
+                            current_level = int(current_level) + 1
+                            dil.update(
+                                current_level=current_level,
+                                dil_status=wf_da_status + ' ' + 'approved',
+                                dil_status_no=2
+                            )
                             # for each level create the allocation
-                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=data['da_id'],
+                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id,
                                                                                 level=current_level).values()
                             for i in flow_approvers:
-                                DAUserRequestAllocation.objects.create(da_id_id=request.data['da_id'],
-                                                                       emp_id_id=i['emp_id'], status="pending")
+                                DAUserRequestAllocation.objects.create(
+                                    dil_id_id=dil_id,
+                                    emp_id_id=i['emp_id'],
+                                    status="pending")
 
                         elif wf_da_count == wf_approver.filter(parallel=True, status__contains='approved').count():
                             currentlevel = current_level
@@ -613,14 +623,28 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                             dil.update(current_level=current_level, status=wf_da_status + ' ' + "approved",
                                        da_status_number=2)
                             # for each level create the allocation
-                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=data['da_id'],
+                            flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id,
                                                                                 level=current_level).values()
                             for i in flow_approvers:
-                                DAUserRequestAllocation.objects.create(dil_id_id=data['da_id'], emp_id_id=i['emp_id'],
-                                                                       status="pending")
+                                DAUserRequestAllocation.objects.create(
+                                    dil_id_id=dil_id,
+                                    emp_id_id=i['emp_id'],
+                                    status="pending")
                         # if the current level is greater than the dil level then update the dil level
-                        if dil_level < current_level:
-                            dil.update(approve_flag=True)
+                        if int(dil_level) < int(current_level):
+                            dil.update(approved_flag=True)
             return Response({'message': 'DIL Auth Threads created successfully', 'status': status.HTTP_201_CREATED})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='get_da_auth_thread')
+    def get_da_auth_thread(self, request, *args, **kwargs):
+        try:
+            da_id = request.data['da_id']
+            da_auth_thread = DAAuthThreads.objects.filter(dil_id=da_id).all()
+            if not da_auth_thread:
+                return Response({'message': 'DA Auth Thread not found', 'status': status.HTTP_204_NO_CONTENT})
+            serializer = DAAuthThreadsSerializer(da_auth_thread, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})

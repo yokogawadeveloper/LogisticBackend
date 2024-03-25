@@ -45,6 +45,7 @@ class DispatchInstruction(models.Model):
     dil_level = models.CharField(max_length=100, default=0)
     approval_level = models.CharField(max_length=100, null=True, blank=True)
     approved_date = models.DateField(blank=True, null=True)
+    approved_flag = models.BooleanField(default=False)
     dil_status_no = models.CharField(max_length=100, default=0)
     dil_status = models.CharField(max_length=100, null=True, blank=True)
     dil_sub_status_no = models.IntegerField(null=True, blank=True, default=0)
@@ -60,6 +61,7 @@ class DispatchInstruction(models.Model):
     revision_count = models.IntegerField(null=True, blank=True)
     remarks = models.TextField(null=True, blank=True, default="")
     dil_stage = models.IntegerField(null=True, blank=True, default=0)
+
     # address
     ship_to_party_no = models.CharField(max_length=100, null=True, blank=True)
     ship_to_party_name = models.CharField(max_length=100, null=True, blank=True)

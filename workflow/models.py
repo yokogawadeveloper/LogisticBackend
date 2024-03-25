@@ -113,7 +113,7 @@ class WorkFlowDaApprovers(models.Model):
     level = models.IntegerField(null=True)
     parallel = models.BooleanField(null=True)
     emp_id = models.IntegerField(null=True)
-    status = models.CharField(max_length=50, null=True)
+    status = models.CharField(max_length=150, null=True)
 
     created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
