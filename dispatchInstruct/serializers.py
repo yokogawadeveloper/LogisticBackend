@@ -5,11 +5,14 @@ from .models import *
 # Serializers define the API representation.
 class DispatchInstructionSerializer(serializers.ModelSerializer):
     dil_no = serializers.CharField(max_length=20, required=True)
+    created_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    updated_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = DispatchInstruction
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
+        depth = 1
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

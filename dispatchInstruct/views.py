@@ -555,7 +555,7 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
             user_id = request.user.id
             stature = data['status']
-            dil_id = data['da_id']
+            dil_id = data['dil_id']
             dil = DispatchInstruction.objects.filter(dil_id=dil_id)
             if dil is not None:
                 current_level = dil.values('current_level')[0]['current_level']
