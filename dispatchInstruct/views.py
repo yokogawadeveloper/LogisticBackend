@@ -21,25 +21,27 @@ class DispatchInstructionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer_data = serializer.save()
-        # Create WorkFlowDaApprovers
-        appover_list_to_app = 0
-        appover_current_da_lev_2 = 0
-        for val in request.data['approverlist']:
-            appover_current_da_lev_1 = val['level']
-            if val['required_list']:
-                if appover_current_da_lev_1 != appover_current_da_lev_2:
-                    appover_list_to_app += 1
-                for emp_id in val['emp_list']:
-                    WorkFlowDaApprovers.objects.create(
-                        da_id_id=serializer_data['da_id'],
-                        wf_id_id=request.data['workflow_id'],
-                        approver=val['approval'],
-                        level=appover_list_to_app,
-                        parallel=val['parallel'],
-                        emp_id=emp_id,
-                        status="pending",
+
+        if 'approverlist' in request.data:
+            appover_list_to_app = 0
+            appover_current_da_lev_2 = 0
+            for val in request.data['approverlist']:
+                appover_current_da_lev_1 = val['level']
+                if val['required_list']:
+                    if appover_current_da_lev_1 != appover_current_da_lev_2:
+                        appover_list_to_app += 1
+                    for emp_id in val['emp_list']:
+                        WorkFlowDaApprovers.objects.create(
+                            dil_id_id=serializer.instance.dil_id,
+                            wf_id_id=val['wf_id'],
+                            approver=val['approval'],
+                            level=val['level'],
+                            parallel=val['parallel'],
+                            emp_id=emp_id,
+                            status="pending",
+                            created_by=request.user
                         )
-            appover_current_da_lev_2 = val['level']
+                appover_current_da_lev_2 = val['level']
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
