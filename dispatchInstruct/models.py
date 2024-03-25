@@ -263,7 +263,10 @@ class DAUserRequestAllocation(models.Model):
     approve_status = models.CharField(max_length=200, default="Approver")
     approver_flag = models.BooleanField(default=False)
     approved_date = models.DateTimeField(auto_now_add=True, null=True)
-
+    remarks = models.CharField(max_length=500, null=True, blank=True)
+    approver_stage = models.CharField(max_length=200, null=True, blank=True)
+    approver_level = models.IntegerField(null=True, blank=True)
+    # default fields
     created_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_by = models.ForeignKey(User, related_name='+', null=True, on_delete=models.CASCADE)
