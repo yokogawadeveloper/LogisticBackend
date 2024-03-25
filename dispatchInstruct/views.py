@@ -358,34 +358,31 @@ class MasterItemListViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 for item in payload:
                     dil = DispatchInstruction.objects.filter(dil_id=item['dil_id']).first()
-                    if not dil:
-                        transaction.set_rollback(True)
+                    if DispatchInstruction.objects.filter(dil_id=item['dil_id']).exists():
+                        MasterItemList.objects.create(
+                            dil_id=dil,
+                            material_description=item['material_discription'],
+                            material_no=item['material_no'],
+                            ms_code=item['ms_code'],
+                            s_loc=item['storage_location'],
+                            plant=item['plant'],
+                            linkage_no=item['linkage_no'],
+                            quantity=item['delivery_quantity'],
+                            country_of_origin=item['ship_to_country'],
+                            # serial_no=item['serial_no'],
+                            # match_no=item['match_no'],
+                            # tag_no=item['tag_no'],
+                            # range=item['range'],
+                            # customer_po_sl_no=item['customer_po_sl_no'],
+                            # customer_po_item_code=item['customer_po_item_code'],
+                            # item_status=item['item_status'],
+                            # item_status_no=item['item_status_no'],
+                            packed_quantity=item['do_item_packed_quantity'],
+                            created_by=request.user
+                        )
+                        return Response({'message': 'Master item list created successfully', 'status': status.HTTP_201_CREATED})
+                    else:
                         return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
-                    if not dil.is_active:
-                        transaction.set_rollback(True)
-                        return Response({'message': 'DIL is not active', 'status': status.HTTP_204_NO_CONTENT})
-                    MasterItemList.objects.create(
-                        dil_id=dil,
-                        material_description=item['material_discription'],
-                        material_no=item['material_no'],
-                        ms_code=item['ms_code'],
-                        s_loc=item['storage_location'],
-                        plant=item['plant'],
-                        linkage_no=item['linkage_no'],
-                        quantity=item['delivery_quantity'],
-                        country_of_origin=item['ship_to_country'],
-                        # serial_no=item['serial_no'],
-                        # match_no=item['match_no'],
-                        # tag_no=item['tag_no'],
-                        # range=item['range'],
-                        # customer_po_sl_no=item['customer_po_sl_no'],
-                        # customer_po_item_code=item['customer_po_item_code'],
-                        # item_status=item['item_status'],
-                        # item_status_no=item['item_status_no'],
-                        packed_quantity=item['do_item_packed_quantity'],
-                        created_by=request.user
-                    )
-                return Response({'message': 'Master item list created successfully', 'status': status.HTTP_201_CREATED})
         except Exception as e:
             transaction.set_rollback(True)
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
