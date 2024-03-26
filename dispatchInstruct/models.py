@@ -1,5 +1,5 @@
-from subordinate.models import *
 from django.db import models
+from subordinate.models import *
 
 
 # Create your models here.
@@ -13,6 +13,7 @@ class DispatchInstruction(models.Model):
     bill_to = models.CharField(max_length=100, null=True, blank=True)
     warranty = models.CharField(max_length=100, null=True, blank=True)
     ld = models.CharField(max_length=100, null=True, blank=True)
+    wf_type = models.IntegerField(null=True, blank=True)
     manual_tcs_gc = models.CharField(max_length=100, null=True, blank=True)
     # other related fields
     insurance_scope = models.ForeignKey(InsuranceScope, on_delete=models.CASCADE, null=True, blank=True)

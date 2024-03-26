@@ -627,7 +627,7 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                     DAUserRequestAllocation.objects.filter(dil_id_id=dil_id).update(approver_flag=True)
                     # if all the approvers are approved then update the status
                     if int(dil_level) >= int(current_level):
-                        WorkFlowDaApprovers.objects.filter(emp_id=user_id).update(status=status)
+                        wf_approver.filter(emp_id=request.user.id).update(status=stature)
                         if wf_da_count == wf_approver.exclude(parallel=True, status__contains='approved').count():
                             currentlevel = current_level
                             current_level = int(current_level) + 1
@@ -643,13 +643,19 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                                 DAUserRequestAllocation.objects.create(
                                     dil_id_id=dil_id,
                                     emp_id_id=i['emp_id'],
-                                    status="pending")
-
+                                    status="pending",
+                                    approver_stage=i['approver'],
+                                    approver_level=i['level']
+                                )
+                        # if the current level is greater than the dil level then update the dil level
                         elif wf_da_count == wf_approver.filter(parallel=True, status__contains='approved').count():
                             currentlevel = current_level
                             current_level = current_level + 1
-                            dil.update(current_level=current_level, status=wf_da_status + ' ' + "approved",
-                                       da_status_number=2)
+                            dil.update(
+                                current_level=current_level,
+                                status=wf_da_status + ' ' + "approved",
+                                da_status_number=2
+                            )
                             # for each level create the allocation
                             flow_approvers = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id,
                                                                                 level=current_level).values()
@@ -661,7 +667,17 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                         # if the current level is greater than the dil level then update the dil level
                         if int(dil_level) < int(current_level):
                             dil.update(approved_flag=True)
-            return Response({'message': 'DIL Auth Threads created successfully', 'status': status.HTTP_201_CREATED})
+
+                if int(dil_level) == int(currentlevel) and status == "approved":
+                    dil.update(dil_status_no=3)
+
+                # create the DA Auth Threads by serializing the data
+                serializer = DAAuthThreadsSerializer(data=data, context={'request': request})
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(
+                        {'message': 'DIL Auth Threads created successfully', 'status': status.HTTP_201_CREATED})
+            return Response({'message': 'DA not found', 'status': status.HTTP_204_NO_CONTENT})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -676,3 +692,57 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
+
+    @action(methods=['post'], detail=False, url_path='da_packing_approved')
+    def da_packing_approved(self, request):
+        try:
+            data = request.data
+            stature = data['status']
+            dil_id = data['dil_id']
+
+            if stature == "modification":
+                DispatchInstruction.objects.filter(dil_id=dil_id).update(current_level=1, status="modification")
+                DAUserRequestAllocation.objects.filter(dil_id_id=dil_id).delete()
+
+                WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id).update(status="pending")
+                WorkFlowDaApprovers.objects.create(
+                    dil_id_id=dil_id,
+                    emp_id=request.user.id,
+                    remarks=data['remarks'],
+                    status="Sent for Modification"
+                )
+
+            elif stature == "reject":
+                DispatchInstruction.objects.filter(dil_id=dil_id).update(current_level=1, status="rejected")
+                DAUserRequestAllocation.objects.filter(dil_id_id=dil_id, emp_id=request.user.id).update(
+                    status="rejected")
+                DAAuthThreads.objects.create(
+                    dil_id_id=dil_id,
+                    emp_id=request.user.id,
+                    remarks=data['remarks'],
+                    status="Rejected"
+                )
+
+            elif stature == "hold":
+                DispatchInstruction.objects.filter(dil_id=dil_id).update(status="hold")
+                DAAuthThreads.objects.create(
+                    dil_id_id=dil_id,
+                    emp_id=request.user.id,
+                    remarks=data['remarks'],
+                    status="Hold")
+
+            else:
+                DAAuthThreads.objects.create(
+                    da_id_id=data['da_id'],
+                    emp_id=request.user.id,
+                    remarks=data['remarks'],
+                    status="packing acknowledged"
+                )
+                DispatchInstruction.objects.filter(da_id=data['da_id']).update(
+                    packing_approver_flag=True,
+                    status="packing acknowledged",
+                    da_status_number=4
+                )
+            return Response({'message': 'DA Packing Approved', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
