@@ -640,8 +640,8 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='get_da_auth_thread')
     def get_da_auth_thread(self, request, *args, **kwargs):
         try:
-            da_id = request.data['da_id']
-            da_auth_thread = DAAuthThreads.objects.filter(dil_id=da_id).all()
+            dil_id = request.data['dil_id']
+            da_auth_thread = DAAuthThreads.objects.filter(dil_id=dil_id).all()
             if not da_auth_thread:
                 return Response({'message': 'DA Auth Thread not found', 'status': status.HTTP_204_NO_CONTENT})
             serializer = DAAuthThreadsSerializer(da_auth_thread, many=True)
