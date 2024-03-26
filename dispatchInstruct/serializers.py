@@ -97,7 +97,7 @@ class DAAuthThreadsSerializer(serializers.ModelSerializer):
     class Meta:
         model = DAAuthThreads
         fields = '__all__'
-        read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at', 'is_active']
+        read_only_fields = ['created_by', 'created_at', 'updated_by', 'updated_at']
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -143,3 +143,5 @@ class MultiFileAttachmentSerializer(serializers.ModelSerializer):
         instance.file_type = validated_data.get('file_type', instance.file_type)
         instance.updated_by = self.context['request'].user
         return super(MultiFileAttachmentSerializer, self).update(instance=instance, validated_data=validated_data)
+
+

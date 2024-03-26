@@ -431,6 +431,41 @@ class MasterItemListViewSet(viewsets.ModelViewSet):
             transaction.set_rollback(True)
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
+    @action(detail=False, methods=['post'], url_path='create_master_item')
+    def create_master_item(self, request, *args, **kwargs):
+        try:
+            payload = request.data
+            dil_id = payload.get("dil_id")
+            item_list = payload.get("item_list", [])
+            dil = DispatchInstruction.objects.filter(dil_id=dil_id).first()
+            if not dil:
+                return Response({'message': 'DIL not found', 'status': status.HTTP_204_NO_CONTENT})
+            for item_data in item_list:
+                material_description = item_data.get("material_discription")
+                material_no = item_data.get("material_no")
+                ms_code = item_data.get("ms_code")
+                linkage_no = item_data.get("linkage_no")
+                quantity = item_data.get("sales_quantity")
+                packed_quantity = item_data.get("packed_quantity")
+                plant = item_data.get("plant")
+                storage_location = item_data.get("s_loc")
+                # Create DispatchBillDetails instance
+                MasterItemList.objects.create(
+                    dil_id=dil,
+                    material_description=material_description,
+                    material_no=material_no,
+                    ms_code=ms_code,
+                    linkage_no=linkage_no,
+                    quantity=quantity,
+                    packed_quantity=packed_quantity,
+                    plant=plant,
+                    s_loc=storage_location,
+                    created_by=request.user
+                )
+            return Response({'message': 'Master List created successfully', 'status': status.HTTP_201_CREATED})
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
 
 class InlineItemListViewSet(viewsets.ModelViewSet):
     queryset = InlineItemList.objects.all()
@@ -586,13 +621,6 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                 else:
                     wf_da_status = WorkFlowDaApprovers.objects.filter(emp_id=user_id).values('approver')[0]['approver']
                     data['approver'] = wf_da_status
-                    # finance_dispatch_flag = data['da_dispatch_approve']
-                    # if finance_dispatch_flag:
-                    #     dil.update(finance_flag=True)
-                    #     data['status'] = "Finance Approved For Dispatch"
-                    # elif data['approver'] == 'Finance' and finance_dispatch_flag == False:
-                    #     data['status'] = "Finance Approved only for Packing"
-
                     # update the allocation table
                     allocation = DAUserRequestAllocation.objects.filter(dil_id_id=dil_id, emp_id=user_id)
                     allocation.update(status="approved", approved_date=datetime.now())

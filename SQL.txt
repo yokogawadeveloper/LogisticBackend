@@ -1,0 +1,9 @@
+1. UPDATE "EmployeeUser" SET is_active=false
+WHERE username NOT IN ('400521','400577','4005151',
+'160453','400104','400520','400136','400611','190605',
+'400187')
+
+
+2.SELECT * FROM public."EmployeeUser"
+WHERE is_active=false AND username='10799'
+ORDER BY id ASC
