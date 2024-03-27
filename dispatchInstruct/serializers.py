@@ -101,7 +101,8 @@ class DAAuthThreadsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
-        validated_data['emp_id'] = self.context['request'].user
+        # take user id as integer and assign to emp_id
+        validated_data['emp_id'] = self.context['request'].user.id
         return DAAuthThreads.objects.create(**validated_data)
 
     def update(self, instance, validated_data):

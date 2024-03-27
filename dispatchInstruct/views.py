@@ -6,6 +6,7 @@ from rest_framework import permissions, status
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.core.exceptions import ObjectDoesNotExist
 from .frames import column_mapping
 from workflow.models import *
 from .serializers import *
@@ -598,7 +599,7 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
             stature = data['status']
             dil_id = data['dil_id']
             dil = DispatchInstruction.objects.filter(dil_id=dil_id)
-            if dil is not None:
+            if dil.exists():
                 current_level = dil.values('current_level')[0]['current_level']
                 dil_level = dil.values('dil_level')[0]['dil_level']
                 wf_approver = WorkFlowDaApprovers.objects.filter(dil_id_id=dil_id, level=current_level)
@@ -626,11 +627,11 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                     allocation.update(status="approved", approved_date=datetime.now())
                     DAUserRequestAllocation.objects.filter(dil_id_id=dil_id).update(approver_flag=True)
                     # if all the approvers are approved then update the status
-                    if int(dil_level) >= int(current_level):
+                    if dil_level >= current_level:
                         wf_approver.filter(emp_id=request.user.id).update(status=stature)
                         if wf_da_count == wf_approver.exclude(parallel=True, status__contains='approved').count():
                             currentlevel = current_level
-                            current_level = int(current_level) + 1
+                            current_level = current_level + 1
                             dil.update(
                                 current_level=current_level,
                                 dil_status=wf_da_status + ' ' + 'approved',
@@ -665,10 +666,10 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                                     emp_id_id=i['emp_id'],
                                     status="pending")
                         # if the current level is greater than the dil level then update the dil level
-                        if int(dil_level) < int(current_level):
+                        if dil_level < current_level:
                             dil.update(approved_flag=True)
 
-                if int(dil_level) == int(currentlevel) and status == "approved":
+                if dil_level == currentlevel and status == "approved":
                     dil.update(dil_status_no=3)
 
                 # create the DA Auth Threads by serializing the data
@@ -678,6 +679,11 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
                     return Response(
                         {'message': 'DIL Auth Threads created successfully', 'status': status.HTTP_201_CREATED})
             return Response({'message': 'DA not found', 'status': status.HTTP_204_NO_CONTENT})
+        except IndexError:
+            return Response({'message': 'Index out of range. Please check the database.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist:
+            return Response({'message': 'Object does not exist'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -693,8 +699,8 @@ class DILAuthThreadsViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'message': str(e), 'status': status.HTTP_400_BAD_REQUEST})
 
-    @action(methods=['post'], detail=False, url_path='da_packing_approved')
-    def da_packing_approved(self, request):
+    @action(methods=['post'], detail=False, url_path='dil_packing_approved')
+    def dil_packing_approved(self, request):
         try:
             data = request.data
             stature = data['status']

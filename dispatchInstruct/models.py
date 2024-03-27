@@ -14,6 +14,8 @@ class DispatchInstruction(models.Model):
     warranty = models.CharField(max_length=100, null=True, blank=True)
     ld = models.CharField(max_length=100, null=True, blank=True)
     wf_type = models.IntegerField(null=True, blank=True)
+    current_level = models.IntegerField(null=True, blank=True, default=0)
+    dil_level = models.IntegerField(null=True, blank=True, default=0)
     manual_tcs_gc = models.CharField(max_length=100, null=True, blank=True)
     # other related fields
     insurance_scope = models.ForeignKey(InsuranceScope, on_delete=models.CASCADE, null=True, blank=True)
@@ -42,8 +44,6 @@ class DispatchInstruction(models.Model):
     finance_date = models.DateField(blank=True, null=True)
     pqa_by = models.CharField(max_length=100, null=True, blank=True)
     pqa_date = models.DateField(blank=True, null=True)
-    current_level = models.CharField(max_length=100, default=0)
-    dil_level = models.CharField(max_length=100, default=0)
     approval_level = models.CharField(max_length=100, null=True, blank=True)
     approved_date = models.DateField(blank=True, null=True)
     approved_flag = models.BooleanField(default=False)
@@ -62,7 +62,6 @@ class DispatchInstruction(models.Model):
     revision_count = models.IntegerField(null=True, blank=True)
     remarks = models.TextField(null=True, blank=True, default="")
     dil_stage = models.IntegerField(null=True, blank=True, default=0)
-
     # address
     ship_to_party_no = models.CharField(max_length=100, null=True, blank=True)
     ship_to_party_name = models.CharField(max_length=100, null=True, blank=True)
